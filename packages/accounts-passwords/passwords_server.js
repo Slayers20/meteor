@@ -140,11 +140,13 @@
       return {token: loginToken, id: userId};
     },
 
-    // xcxc expose client api
     forgotPassword: function (options) {
       var email = options.email;
+      var baseUrl = options.baseUrl;
       if (!email)
         throw new Meteor.Error(400, "Need to set options.email");
+      if (!baseUrl)
+        throw new Meteor.Error(400, "Need to set options.baseUrl");
 
       var user = Meteor.users.findOne({emails: email});
       if (!user)
@@ -152,26 +154,31 @@
 
       var token = Meteor.uuid();
       var creationTime = (new Date()).getTime();
-      Meteor.users.update(user._id, {$set: {"services.password.reset": {
-        token: token,
-        creationTime: creationTime
-      }}});
+      Meteor.users.update(user._id, {$set: {
+        "services.password.reset": {
+          token: token,
+          creationTime: creationTime
+        }
+      }});
 
-      // xcxc
-      // xcxc construct url based on hostname? how do we know the hostname?
-      Meteor.mail.send(email, "token is " + token);
+      Meteor.mail.send(email, baseUrl + "#reset-password/" + token);
     },
 
-    // xcxc make use srp, and actually change password
-    resetPasswordAndLogin: function (token, newPassword) {
+    resetPasswordAndLogin: function (token, verifier) {
       if (!token)
         throw new Meteor.Error(400, "Need to pass token");
-      if (!newPassword)
-        throw new Meteor.Error(400, "Need to pass newPassword");
+      if (!verifier)
+        throw new Meteor.Error(400, "Need to pass verifier");
 
       var user = Meteor.users.findOne({"services.password.reset.token": token});
       if (!user)
         throw new Meteor.Error(403, "Invalid token");
+
+      Meteor.users.update({_id: user._id}, {
+        $set: {'services.password.srp': verifier},
+        $unset: {'services.password.reset': 1}
+      });
+
       var loginToken = Meteor.accounts._loginTokens.insert({userId: user._id});
       this.setUserId(user._id);
       return {token: loginToken, id: user._id};
@@ -239,7 +246,6 @@
 })();
 
 
-// xcxc
 Meteor.mail = {};
 Meteor.mail.send = function() {
   console.log("Send mail:");

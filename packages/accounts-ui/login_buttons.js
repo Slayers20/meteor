@@ -129,18 +129,26 @@
     return getLoginServices().length > 1;
   };
 
+  Template.loginButtonsServicesRow.isForgotPasswordFlow = function () {
+    return Session.get(IN_FORGOT_PASSWORD_FLOW_KEY);
+  };
+
+  //
+  // loginButtonsMessage template
+  //
+
+  Template.loginButtonsMessages.errorMessage = function () {
+    return Session.get(ERROR_MESSAGE_KEY);
+  };
+
+  Template.loginButtonsMessages.infoMessage = function () {
+    return Session.get(INFO_MESSAGE_KEY);
+  };
+
 
   //
   // loginButtonsServicesRowDynamicPart template
   //
-
-  // xcxc move this?
-  Template.loginButtonsMessages.errorMessage = function () {
-    return Session.get(ERROR_MESSAGE_KEY);
-  };
-  Template.loginButtonsMessages.infoMessage = function () {
-    return Session.get(INFO_MESSAGE_KEY);
-  };
 
   Template.loginButtonsServicesRowDynamicPart.inLoginFlow = function () {
     return !Session.get(IN_SIGNUP_FLOW_KEY) && !Session.get(IN_FORGOT_PASSWORD_FLOW_KEY);
@@ -150,11 +158,10 @@
     return Session.get(IN_SIGNUP_FLOW_KEY);
   };
 
-  // xcxc move to the right place in the file or something
-  Template.loginButtonsServicesRow.xcxcIsForgotPasswordFlow = function () {
-    return Session.get(IN_FORGOT_PASSWORD_FLOW_KEY);
-  };
-  // xcxc move this too
+
+  //
+  // forgotPasswordForm template
+  //
   Template.forgotPasswordForm.events = {
     'keypress #forgot-password-email': function (event) {
       if (event.keyCode === 13)
@@ -170,7 +177,7 @@
 
     var email = document.getElementById("forgot-password-email").value;
     if (email.indexOf('@') !== -1) {
-      Meteor.call("forgotPassword", {email: email}, function (error) {
+      Meteor.forgotPassword({email: email}, function (error) {
         if (error)
           Session.set(ERROR_MESSAGE_KEY, error.reason);
         else
@@ -180,6 +187,7 @@
       Session.set(ERROR_MESSAGE_KEY, "Invalid email");
     }
   };
+
 
   //
   // loginButtonsServicesDropdown template
@@ -213,13 +221,10 @@
     return Session.get(DROPDOWN_VISIBLE_KEY);
   };
 
-  //
-  // xcxc
-  //
 
-  Template.resetPasswordForm.inResetPasswordFlow = function () {
-    return Session.get(IN_RESET_PASSWORD_FLOW_KEY);
-  };
+  //
+  // resetPasswordForm template
+  //
 
   Template.resetPasswordForm.events = {
     'click #reset-password-button': function () {
@@ -232,26 +237,33 @@
   };
 
   var resetPassword = function () {
+    resetMessages();
     var newPassword = document.getElementById('reset-password-new-password').value;
-    // xcxc validate newPassword
+    if (!validatePassword(newPassword))
+      return;
 
-    Meteor.call("resetPasswordAndLogin", resetPasswordToken, "xcxc", function (error, result) {
-      if (error) {
-        alert(error.reason);
-      } else {
-        Session.set(IN_RESET_PASSWORD_FLOW_KEY, false);
-        Meteor.accounts.makeClientLoggedIn(result.id, result.token);
-      }
-    });
+    Meteor.resetPasswordAndLogin(
+      {token: Session.get('resetPasswordToken'), newPassword: newPassword},
+      function (error, result) {
+        if (error) {
+          Session.set(ERROR_MESSAGE_KEY, error.reason);
+        } else {
+          Session.set('resetPasswordtoken', null);
+          Session.set(IN_RESET_PASSWORD_FLOW_KEY, false);
+          Meteor.accounts.makeClientLoggedIn(result.id, result.token);
+        }
+      });
   };
 
-  // xcxc
+  Template.resetPasswordForm.inResetPasswordFlow = function () {
+    return Session.get(IN_RESET_PASSWORD_FLOW_KEY);
+  };
 
-  var match = window.location.pathname.match(/^\/accounts\/reset-password\/(.*)$/);
+  var match = window.location.hash.match(/^\#reset-password\/(.*)$/);
   if (match) {
-    resetPasswordToken = match[1];
+    Session.set('resetPasswordToken', match[1]); // xcxc name
     Session.set(IN_RESET_PASSWORD_FLOW_KEY, true);
-//    window.location.pathname = '/'; // ???
+    window.location.hash = '';
   }
 
 
@@ -279,19 +291,19 @@
 
     // XXX these will become configurable, and will be validated on
     // the server as well.
-    if (username.length < 3) {
-      Session.set(ERROR_MESSAGE_KEY, "Username must be at least 3 characters long");
-    } else if (password.length < 6) {
-      Session.set(ERROR_MESSAGE_KEY, "Password must be at least 6 characters long");
-    } else if (password !== passwordAgain) {
+    if (!validateUsername(username) || !validatePassword(password))
+      return;
+
+    if (password !== passwordAgain) {
       Session.set(ERROR_MESSAGE_KEY, "Passwords don't match");
-    } else {
-      Meteor.createUser({username: username, password: password}, function (error) {
-        if (error) {
-          Session.set(ERROR_MESSAGE_KEY, error.reason);
-        }
-      });
+      return;
     }
+
+    Meteor.createUser({username: username, password: password}, function (error) {
+      if (error) {
+        Session.set(ERROR_MESSAGE_KEY, error.reason);
+      }
+    });
   };
 
   var loginOrSignup = function () {
@@ -319,4 +331,25 @@
 
     return ret;
   };
+
+
+  // XXX improve these? should this be in accounts-passwords instead?
+  var validateUsername = function (username) {
+    if (username.length >= 3) {
+      return true;
+    } else {
+      Session.set(ERROR_MESSAGE_KEY, "Username must be at least 3 characters long");
+      return false;
+    }
+  };
+  var validatePassword = function (password) {
+    if (password.length >= 6) {
+      return true;
+    } else {
+      Session.set(ERROR_MESSAGE_KEY, "Password must be at least 6 characters long");
+      return false;
+    }
+  };
 })();
+
+// xcxc what happens when token doesn't exist?

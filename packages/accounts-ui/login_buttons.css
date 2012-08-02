@@ -175,10 +175,12 @@
     margin-left: -79px; /* = .accounts-dialog.width/2 */
 
     top: 50%;
-    margin-top: -40px; /* = height/2 */
-    height: 80px;
+    margin-top: -40px; /* = height/2 xcxc */
 
-    /* xcxc should we instead not have constant height? */
+/* xcxc fix width by either taking padding into account or refactoring
+   to use an inner div with margin instead*/
+
+    /* xcxc more padding?*/
 }
 
 .hide-background {
@@ -188,7 +190,7 @@
     width: 100%;
     height: 100%;
     z-index: 999;
-    background-color: rgba(1, 1, 1, 0.9);
+    background-color: rgba(0, 0, 0, 0.7);
 }
 
 /* xcxc ie7 - a bunch of stuff including icons on login buttons *

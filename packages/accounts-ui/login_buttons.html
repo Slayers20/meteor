@@ -37,7 +37,7 @@
           <span class="hline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
         </div>
       {{/if}}
-      {{#if xcxcIsForgotPasswordFlow}}
+      {{#if isForgotPasswordFlow}}
       {{> forgotPasswordForm}}
       {{else}}
       <div class="login-form login-password-form">
@@ -131,6 +131,8 @@
       New password
     </label>
     <input id="reset-password-new-password"/>
+
+    {{> loginButtonsMessages}}
 
     <div class="login-button login-button-form-submit" id="reset-password-button">
       Reset password
