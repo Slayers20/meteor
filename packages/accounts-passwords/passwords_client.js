@@ -124,4 +124,33 @@
       });
     }
   };
+
+  // Sends an email to a user with a link that can be used to reset
+  // their password
+  //
+  // @param options {Object}
+  //   - email: (email)
+  Meteor.forgotPassword = function(options, callback) {
+    if (!options.email)
+      throw new Error("Must pass options.email");
+    options.baseUrl = window.location.protocol + "//"
+      + window.location.host + "/";
+    Meteor.call("forgotPassword", options, callback);
+  };
+
+  // Resets a password based on a token originally created by
+  // Meteor.forgotPassword, and then logs in the matching user.
+  //
+  // @param token {String}
+  // @param newPassword {String}
+  Meteor.resetPassword = function(token, newPassword, callback) {
+    if (!token)
+      throw new Error("Need to pass options.token");
+    if (!newPassword)
+      throw new Error("Need to pass options.newPassword");
+
+    var verifier = Meteor._srp.generateVerifier(newPassword);
+    Meteor.call("resetPassword", token, verifier, callback);
+  };
 })();
+
